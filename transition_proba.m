@@ -1,4 +1,4 @@
-function [omega] = transition_proba(sprec, wprec, alpha, rho, tau, u, t)
+function [omega] = transition_proba(sprec, alpha, rho, tau, u, t)
 
 % Function to compute the transition probability for a 
 % 2 states MS-Threshold Model 
@@ -6,7 +6,6 @@ function [omega] = transition_proba(sprec, wprec, alpha, rho, tau, u, t)
 % Inputs: 
 %
 % - sprec: regime of the precedent period
-% - wprec: precedent value for the latent process
 % - alpha: autoregressive coefficient of the latent process
 % - rho: correlation coefficient between residuals of latent and observed
 % process
@@ -23,7 +22,6 @@ function [omega] = transition_proba(sprec, wprec, alpha, rho, tau, u, t)
 absrho = abs(rho);
 num_elem = normcdf((tau - rho*u)*sqrt(1-alpha^2)/alpha, 0, 1);
 denom_elem = normcdf(tau*sqrt(1-alpha^2), 0, 1);
-x = wprec * sqrt(1 - alpha^2);
 
 % Function integrated to compute transition probabilities (--> à revoir :
 % Phi_p peut être une N bivariée, attention)
@@ -72,7 +70,7 @@ elseif alpha == 1 && absrho < 1
         omega = normcdf(tau, 0, 1);
     else
         bound = tau / sqrt(tau - 1);
-        denom = (1-sprec) * normcdf(bound, 0, 1) + sprec(1-normcdf(bound);
+        denom = (1-sprec) * normcdf(bound, 0, 1) + sprec(1-normcdf(bound));
         omega = ((1-sprec) * integral(@(x) fun_rw(x, t, tau, u, rho), -Inf, bound) + sprec * integral(@(x) fun_rw(x, t, tau, u, rho), bound, Inf))...
             / denom;
     end
