@@ -1,87 +1,231 @@
-function LIKV = ms_threshold_filter(x)
-
-% Function which computes the likelihood for a MS model with threshold
+function [log_L, pi_filtered, pi_predicted] = ms_threshold_filter(y, params)
+% MARKOV_FILTER  Compute log-likelihood using modified Markov switching filter
+%
+% Implements the filtering algorithm from Chang, Choi & Park (2017)
+% for endogenous regime switching models
+%
+% Reference: Section 3, equations (18), (19), (20)
+%
 % Inputs:
-% 
-% Vector of parameters x containing: 
-% - mu: vector containing the average of the observed process in both
-% states
-% - sigma: vector containing the volatility of the observed process in both
-% states
-% - tau: threshold level
-% - alpha: autoregressive coefficient for the latent process
-% - rho: correlation coefficient between residuals of latent and observed
-% process
-% - arcoefs: vector containing the p coefficients of the observed AR
-% process
+%   y      : (T × 1) vector of observations
+%   params : parameter structure with fields:
+%            - alpha : AR coefficient of latent factor
+%            - tau   : threshold
+%            - rho   : endogeneity parameter
+%            - mu    : (r × 1) regime means
+%            - sigma : (r × 1) regime volatilities
+%            - gamma : (k × 1) AR coefficients
+%            - k     : AR order
+%            - r     : number of regimes (must be 2)
+%
+% Outputs:
+%   log_L        : log-likelihood value
+%   pi_filtered  : (T × n_configs) filtered probabilities P(config | y_{1:t})
+%   pi_predicted : (T × n_configs) predicted probabilities P(config | y_{1:t-1})
+%
+% Algorithm:
+%   For each t = 1, ..., T:
+%     1. Prediction:  pi_{t|t-1} from pi_{t-1|t-1} (equation 19)
+%     2. Likelihood:  p(y_t | y_{1:t-1}) (equation 18)
+%     3. Update:      pi_{t|t} from pi_{t|t-1} and y_t (equation 20)
 
-% Affectation of the serie 
-global endog;
-
-% Affectation of all parameters
-mu = x(1); sigma = x(2);
-tau = x(3); 
-alpha = x(4);
-rho = x(5);
-arcoefs = x(6);
-
-% Length of the serie
-T = length(endog);
-
-% Vectors for the predicted probability and updated probability
-predicted_density = zeros(T,1);
-updating_density = zeros(T,1);
-
-% Number of lags in the observed AR process
-k = length(arcoefs);
-
-% Number of regimes we are considering (max in case we considering change
-% in vol but mean constant) -> pas besoin si mêmes coefs
-nb_regimes = max(length(vecMu), length(vecSigma));
-
-% Initialization of the likelihood (to check, log(p(y_1))
-LIKV = 0;
-
-% Vector or the state ordering (we compute in all state: lower ->
-% higher)
-s = 0:nb_regimes;
-
-% Initialization of the transition probability for time K-1 (-> prec
-% updating)
-
- % for loop (starting at t = k+2)
- for t = (k+2):T
-     
-     %% First part of the algorithm: Prediction step
-     % computation of residuals at time t-1 within each regime
-     resid_prec = (endog(t-1) - mu - arcoefs * endog(t-k-1:t-2))/sigma;
-
-     % Computation of the transition probability (should return a vector)
-     % -> à voir sur les dims
-     transition_proba = transition_proba(s, alpha, rho, tau, resid_prec, t);
+    %% Validation
+    if params.r ~= 2
+        error('markov_filter only supports r=2 regimes');
+    end
     
-     % Computation of the transition density at time t
-     transition_density = (1-s)*transition_proba + s * transition_proba;
-
-     % Computation of the predicted densities (see for prec updating) -> A
-     % revoir sur les sums, plus de l'archi pure --> Pas une sum des 4 (2 +
-     % 2, mat 2,1)
-     predicted_density = sum(transition_density);
-
-     %% Second part of the algorithm: Computation of the likelihood
-     % Computation of the conditional density of y given s
-     condi_density_ys = normpdf(endog(t), mu+phi*endog(t-k:t-1),sigma).*predicted_density;
-     
-     % Sum over the regimes and likelihood computation
-     condi_density_y = sum(condi_density_ys);
-     LL = -1 * log(condi_density_y);
-
-     %% Third part of the algorithm: Updating step
-     updating_density(t,1) = (condi_density_ys.*predicted_density)/condi_density_y;
-     
-     %% Fourth part: aggregating the likelihood
-     LIKV = LIKV + LL;
- end
-
+    T = length(y);
+    k = params.k;
+    r = params.r;
+    
+    %% Generate all configurations
+    configs = generate_all_configs(k, r);
+    n_configs = size(configs, 1);  % r^(k+1)
+    
+    %% Initialize storage
+    pi_filtered = zeros(T, n_configs);
+    pi_predicted = zeros(T, n_configs);
+    log_likelihoods = zeros(T, 1);
+    
+    %% STEP 1: Initialize filter at t=1
+    pi_1 = initialize_filter(params);
+    
+    %% STEP 2: Process first observation (t=1)
+    % At t=1, we use initial distribution
+    pi_predicted(1, :) = pi_1';
+    
+    % Compute likelihood at t=1
+    [likelihood_t, densities] = likelihood_step_internal(pi_1, y, 1, params, configs);
+    log_likelihoods(1) = log(likelihood_t);
+    
+    % Update at t=1
+    pi_filtered(1, :) = update_step_internal(pi_1, densities, likelihood_t)';
+    
+    %% STEP 3: Main filtering loop (t = 2, ..., T)
+    for t = 2:T
+        % Extract previous filtered distribution
+        pi_prev = pi_filtered(t-1, :)';
+        
+        % PREDICTION STEP: Compute pi_{t|t-1}
+        pi_pred = prediction_step_internal(pi_prev, y, t, params, configs);
+        pi_predicted(t, :) = pi_pred';
+        
+        % LIKELIHOOD STEP: Compute p(y_t | y_{1:t-1})
+        [likelihood_t, densities] = likelihood_step_internal(pi_pred, y, t, params, configs);
+        log_likelihoods(t) = log(likelihood_t);
+        
+        % UPDATE STEP: Compute pi_{t|t}
+        pi_filt = update_step_internal(pi_pred, densities, likelihood_t);
+        pi_filtered(t, :) = pi_filt';
+    end
+    
+    %% STEP 4: Compute total log-likelihood
+    log_L = sum(log_likelihoods);
+    
+    %% Validation
+    if isnan(log_L) || isinf(log_L)
+        warning('Log-likelihood is NaN or Inf');
+    end
 end
 
+%% ========================================================================
+%% INTERNAL FUNCTION: PREDICTION STEP
+%% ========================================================================
+
+function pi_pred = prediction_step_internal(pi_prev, y, t, params, configs)
+% PREDICTION_STEP  Compute predicted distribution pi_{t|t-1}
+%
+% Reference: Equation (19), page 132
+
+    n_configs = size(configs, 1);
+    k = params.k;
+    r = params.r;
+    
+    pi_pred = zeros(n_configs, 1);
+    
+    %% Loop over all FUTURE configurations at time t
+    for i = 1:n_configs
+        config_future = configs(i, :);  % [s_t, s_{t-1}, ..., s_{t-k}]
+        
+        %% Marginalize over s_{t-k-1}
+        for s_past = 0:(r-1)
+            % Build PREVIOUS configuration
+            % [s_{t-1}, s_{t-2}, ..., s_{t-k}, s_{t-k-1}]
+            config_prev = [config_future(2:end), s_past];
+            
+            % Find index of this previous config
+            idx_prev = find_config_index(configs, config_prev);
+            
+            if idx_prev > 0 && pi_prev(idx_prev) > 1e-15
+                % Extract relevant states for transition
+                s_prev = config_prev(1);  % s_{t-1}
+                
+                % Compute u_{t-1} (standardized residual)
+                [m_prev, sigma_prev] = compute_moments(y, config_prev, t-1, params);
+                u_prev = (y(t-1) - m_prev) / sigma_prev;
+                
+                % Compute transition probability using omega
+                omega = transition_proba(s_prev, u_prev, t, params);
+                
+                % P(s_t | s_{t-1}, ..., s_{t-k-1}, F_{t-1})
+                s_t = config_future(1);
+                if s_t == 0
+                    p_trans = omega;        % Transition to low regime
+                else
+                    p_trans = 1 - omega;    % Transition to high regime
+                end
+                
+                % Accumulate
+                pi_pred(i) = pi_pred(i) + p_trans * pi_prev(idx_prev);
+            end
+        end
+    end
+    
+    %% Normalize to ensure sum = 1
+    sum_pi = sum(pi_pred);
+    if sum_pi > 1e-15
+        pi_pred = pi_pred / sum_pi;
+    else
+        warning('Prediction step: sum of probabilities near zero at t=%d', t);
+        pi_pred = ones(n_configs, 1) / n_configs;  % Uniform as fallback
+    end
+end
+
+%% ========================================================================
+%% INTERNAL FUNCTION: LIKELIHOOD STEP
+%% ========================================================================
+
+function [likelihood, densities] = likelihood_step_internal(pi_pred, y, t, params, configs)
+% LIKELIHOOD_STEP  Compute p(y_t | F_{t-1}) by summing over all configs
+%
+% Reference: Equation (18), page 132
+
+    n_configs = size(configs, 1);
+    densities = zeros(n_configs, 1);
+    
+    %% Loop over all configurations
+    for i = 1:n_configs
+        config = configs(i, :);  % [s_t, s_{t-1}, ..., s_{t-k}]
+        
+        % Compute conditional mean and volatility for this config
+        [m_t, sigma_t] = compute_moments(y, config, t, params);
+        
+        % Density: p(y_t | config, F_{t-1}) = N(y_t; m_t, sigma_t^2)
+        densities(i) = normpdf(y(t), m_t, sigma_t);
+    end
+    
+    %% Sum over all configurations (equation 18)
+    % p(y_t | F_{t-1}) = sum_i p(y_t | config_i) * pi_pred(i)
+    likelihood = sum(densities .* pi_pred);
+    
+    %% Handle numerical issues
+    if likelihood < 1e-300
+        warning('Very small likelihood at t=%d: %.2e', t, likelihood);
+        likelihood = 1e-300;  % Prevent log(0)
+    end
+end
+
+%% ========================================================================
+%% INTERNAL FUNCTION: UPDATE STEP
+%% ========================================================================
+
+function pi_updated = update_step_internal(pi_pred, densities, likelihood)
+% UPDATE_STEP  Bayesian update using observed y_t
+%
+% Reference: Equation (20), page 133
+
+    %% Bayes' rule (equation 20)
+    pi_updated = (densities .* pi_pred) / likelihood;
+    
+    %% Normalize (to handle numerical errors)
+    sum_pi = sum(pi_updated);
+    if abs(sum_pi - 1) > 1e-10
+        pi_updated = pi_updated / sum_pi;
+    end
+    
+    %% Validation
+    if any(pi_updated < 0) || any(isnan(pi_updated))
+        warning('Invalid probabilities in update step');
+        pi_updated = max(0, pi_updated);
+        pi_updated = pi_updated / sum(pi_updated);
+    end
+end
+
+%% ========================================================================
+%% HELPER FUNCTION
+%% ========================================================================
+
+function idx = find_config_index(configs, target_config)
+% Find the row index of target_config in configs matrix
+% Returns 0 if not found
+
+    n_configs = size(configs, 1);
+    idx = 0;
+    
+    for i = 1:n_configs
+        if all(configs(i, :) == target_config)
+            idx = i;
+            return;
+        end
+    end
+end

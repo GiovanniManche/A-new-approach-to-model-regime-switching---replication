@@ -1,95 +1,112 @@
-function [omega] = transition_proba(sprec, alpha, rho, tau, u, t)
-
-% Function to compute the transition probability for a 
-% 2 states MS-Threshold Model 
-% 
-% Inputs: 
+function omega = transition_proba(s_prev, u_prev, t, params)
+% COMPUTE_OMEGA_RHO  Transition probability to regime 0 (low state)
 %
-% - sprec: regime of the precedent period
-% - alpha: autoregressive coefficient of the latent process
-% - rho: correlation coefficient between residuals of latent and observed
-% process
-% - tau: threshold 
-% - u: precedent value of the residuals of observed process
-% - t: prece
-
-% Output: 
+% Reference: Chang, Choi & Park (2017), Theorem 3.1, Corollary 3.2
 %
-% omega: transition probability to the low state conditional on the
-% previous states and past values of observed time series
+% Inputs:
+%   s_prev : previous state (0 or 1)
+%   u_prev : standardized residual at t-1
+%   t      : current time
+%   params : parameter structure
+%
+% Output:
+%   omega : P(s_t = 0 | s_{t-1}, u_{t-1}, theta)
 
-% Useful elements for computation
-absrho = abs(rho);
-num_elem = normcdf((tau - rho*u)*sqrt(1-alpha^2)/alpha, 0, 1);
-denom_elem = normcdf(tau*sqrt(1-alpha^2), 0, 1);
-
-% Function integrated to compute transition probabilities (--> à revoir :
-% Phi_p peut être une N bivariée, attention)
-fun_statio = @(x, alpha, tau, u, rho) normcdf(((tau - rho * u - alpha * x / (sqrt(1-alpha^2)))/sqrt(1-rho^2)), 0, 1)...
-    * normpdf(x);
-
-fun_rw = @(x, t, tau, u, rho) normcdf(((tau - rho * u - x * sqrt(t-1)) /sqrt(1-rho^2)), 0, 1)...
-    * normpdf(x);
-
-% First case: |rho| = 1 and alpha = 0
-if absrho == 1 && alpha == 0
-    omega = rho * u < tau;
-   
-% Second case: |rho| = 1 and 0 < alpha < 1
-elseif absrho == 1 && (0 < alpha && alpha < 1)
-    omega = (1-sprec) * min(1, num_elem/denom_elem) ...
-        + sprec * max(0, (num_elem - denom_elem)/(1-denom_elem));
-
-% Third case: |rho| = 1 and -1 < alpha < 0
-elseif absrho == 1 && (-1 < alpha && alpha < 0)
-    omega = sprec * min(1, (1-num_elem)/(1-denom_elem)) + (1-sprec) * ...
-        max((denom_elem - num_elem)/denom_elem);
-
-% Fourth case: |rho| = 1 and alpha = 1
-elseif absrho == 1 && alpha == 1
-    % Case where t=1
-    if t == 1
-        omega = normcdf(tau - rho * u, 0, 1);
-     
-    else
-        % Case rho * u > 0
-        if rho * u > 0
-            omega = 1 - sprec;
+    %% Validation
+    if params.r ~= 2
+        error('compute_omega_rho only supports r=2 regimes, got r=%d', params.r);
+    end
+    
+    if s_prev ~= 0 && s_prev ~= 1
+        error('s_prev must be 0 or 1, got %d', s_prev);
+    end
+    
+    %% Extract parameters
+    alpha = params.alpha;
+    tau   = params.tau;
+    rho   = params.rho;
+    
+    %% Numerical tolerance for boundary cases
+    tol = 1e-6;
+    
+    %% Compute transition probability
+    absrho = abs(rho);
+    
+    % Precompute elements (if needed for special cases)
+    if abs(alpha) < 1 - tol
+        num_elem = normcdf((tau - rho*u_prev)*sqrt(1-alpha^2)/alpha, 0, 1);
+        denom_elem = normcdf(tau*sqrt(1-alpha^2), 0, 1);
+    end
+    
+    % Define integrands with ELEMENTWISE operations (.* ./ .^)
+    fun_statio = @(x) normcdf((tau - rho*u_prev - alpha.*x./sqrt(1-alpha^2))./sqrt(1-rho^2), 0, 1) .* normpdf(x);
+    
+    fun_rw = @(x) normcdf((tau - rho*u_prev - x.*sqrt(t-1))./sqrt(1-rho^2), 0, 1) .* normpdf(x);
+    
+    %% CASE ANALYSIS
+    
+    % CASE 1: |rho| = 1 and alpha = 0
+    if abs(absrho - 1) < tol && abs(alpha) < tol
+        omega = double(rho * u_prev < tau);
+        
+    % CASE 2: |rho| = 1 and 0 < alpha < 1
+    elseif abs(absrho - 1) < tol && (alpha > tol && alpha < 1 - tol)
+        omega = (1 - s_prev) * min(1, num_elem/denom_elem) ...
+              + s_prev * max(0, (num_elem - denom_elem)/(1 - denom_elem));
+        
+    % CASE 3: |rho| = 1 and -1 < alpha < 0
+    elseif abs(absrho - 1) < tol && (alpha < -tol && alpha > -1 + tol)
+        omega = s_prev * min(1, (1 - num_elem)/(1 - denom_elem)) ...
+              + (1 - s_prev) * max(0, (denom_elem - num_elem)/denom_elem);
+        
+    % CASE 4: |rho| = 1 and alpha = 1
+    elseif abs(absrho - 1) < tol && abs(alpha - 1) < tol
+        if t == 1
+            omega = normcdf(tau - rho * u_prev, 0, 1);
         else
-            omega = (normcdf((tau - rho * u)/sqrt(t-1), 0, 1)-sprec * normcdf(tau/sqrt(t-1), 0, 1))...
-                /((1-sprec)*normcdf(tau/sqrt(t-1), 0, 1) + sprec * (1 - normcdf(tau/sqrt(t-1), 0, 1)));
+            if rho * u_prev > 0
+                omega = 1 - s_prev;
+            else
+                bound = tau / sqrt(t - 1);
+                num = normcdf((tau - rho*u_prev)/sqrt(t-1), 0, 1) ...
+                    - s_prev * normcdf(bound, 0, 1);
+                denom = (1 - s_prev) * normcdf(bound, 0, 1) ...
+                      + s_prev * (1 - normcdf(bound, 0, 1));
+                omega = num / denom;
+            end
         end
-    end
-
-% Other cases of rho:
-% First case: alpha = 1 and |rho| < 1
-elseif alpha == 1 && absrho < 1
-
-    % Case for t = 1
-    if t == 1
-        omega = normcdf(tau, 0, 1);
+        
+    % CASE 5: alpha = 1 and |rho| < 1
+    elseif abs(alpha - 1) < tol && absrho < 1 - tol
+        if t == 1
+            omega = normcdf(tau, 0, 1);
+        else
+            bound = tau / sqrt(t - 1);
+            denom = (1 - s_prev) * normcdf(bound, 0, 1) ...
+                  + s_prev * (1 - normcdf(bound, 0, 1));
+            
+            int_low = integral(fun_rw, -Inf, bound);
+            int_high = integral(fun_rw, bound, Inf);
+            
+            omega = ((1 - s_prev) * int_low + s_prev * int_high) / denom;
+        end
+        
+    % CASE 6: |alpha| < 1 and |rho| < 1 (MOST COMMON)
+    elseif abs(alpha) < 1 - tol && absrho < 1 - tol
+        bound = tau * sqrt(1 - alpha^2);
+        denom = (1 - s_prev) * normcdf(bound, 0, 1) ...
+              + s_prev * (1 - normcdf(bound, 0, 1));
+        
+        int_low = integral(fun_statio, -Inf, bound);
+        int_high = integral(fun_statio, bound, Inf);
+        
+        omega = ((1 - s_prev) * int_low + s_prev * int_high) / denom;
+        
+    % ERROR: Invalid parameters
     else
-        bound = tau / sqrt(tau - 1);
-        denom = (1-sprec) * normcdf(bound, 0, 1) + sprec(1-normcdf(bound));
-        omega = ((1-sprec) * integral(@(x) fun_rw(x, t, tau, u, rho), -Inf, bound) + sprec * integral(@(x) fun_rw(x, t, tau, u, rho), bound, Inf))...
-            / denom;
+        error('Invalid parameter combination: alpha=%.10f, rho=%.10f', alpha, rho);
     end
-
-% Case |alpha| < 1 and |rho| < 1
-elseif abs(alpha) < 1 && absrho < 1
-    bound = tau * sqrt(1-alpha^2);
-    denom = (1-sprec) * normcdf(bound, 0, 1) + sprec(1 - normcdf(bound, 0, 1));
-    omega = ((1-sprec) * integral(@(x) fun_statio(x, alpha, tau, u, rho), -Inf, bound) + ...
-        sprec * integral(@(x) fun_statio(x, alpha, tau, u, rho), bound, Inf))...
-            / denom;
-
-% Other cases : not supposed to happen
-else
-    disp("Alpha value :");
-    disp(alpha);
-    disp("Rho value:");
-    disp(rho);
-    error("Error in transition proba computation");
+    
+    % Ensure omega is in [0, 1]
+    omega = max(0, min(1, omega));
 end
-end
-
