@@ -1,0 +1,24 @@
+ ESTIMATION RESULTS: ENDOGENOUS MODEL (Chang et al.)
+Mu (Recession)       |    -0.0261 |     0.0614 |    -0.43 
+Mu (Expansion)       |     0.5301 |     0.0398 |    13.31 ***
+Sigma                |     0.3478 |     0.0247 |    14.09 ***
+Alpha (Latent)       |     0.9331 |     0.0415 |    22.50 ***
+Tau (Threshold)      |    -0.5122 |     0.9442 |    -0.54 
+Rho (Endog)          |    -0.8507 |     0.2355 |    -3.61 ***
+Gamma (AR1)          |     0.1057 |     0.1082 |     0.98 
+Gamma (AR2)          |     0.0578 |     0.0939 |     0.61 
+Gamma (AR3)          |    -0.2783 |     0.1091 |    -2.55 **
+Gamma (AR4)          |    -0.1529 |     0.0990 |    -1.54 
+
+
+ ESTIMATION RESULTS: EXOGENOUS MODEL (Standard Hamilton)
+Mu (Recession)       |    -0.1525 |     0.1203 |    -1.27 
+Mu (Expansion)       |     0.5090 |     0.0327 |    15.57 ***
+Sigma                |     0.3336 |     0.0345 |     9.67 ***
+Alpha (Latent)       |     0.8717 |     0.0824 |    10.58 ***
+Tau (Threshold)      |    -1.1268 |     0.6461 |    -1.74 *
+Rho (FIXED=0)        |     0.0000 |     1.0000 |     0.00 
+Gamma (AR1)          |     0.0089 |     0.3011 |     0.03 
+Gamma (AR2)          |    -0.0666 |     0.1487 |    -0.45 
+Gamma (AR3)          |    -0.2475 |     0.1287 |    -1.92 *
+Gamma (AR4)          |    -0.2019 |     0.1176 |    -1.72 *
