@@ -27,6 +27,7 @@ function [tables] = display_estimation_results(output, options)
     %                       .exogenous   : Table for exogenous model (if available)
     %                       .comparison  : LR test results table
     %                       .text        : Full text output (same as file)
+    %% ====================================================================
     
     %% Parse inputs + robustness
     if nargin < 2
@@ -287,3 +288,4 @@ function [tables] = display_estimation_results(output, options)
         tbl = table(Parameter, Estimate, StdErr, tStat, Significance);
 
     end
+
