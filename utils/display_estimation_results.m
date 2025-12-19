@@ -1,27 +1,27 @@
 function [tables] = display_estimation_results(output, options)
     %% FUNCTION DESCRIPTION
-    % Display in MATLAB and save in txt file estimation results.
+    % Display in the matlab window and save in txt file estimation results.
     % 
-    % INPUTS:
+    % INPUTS :
     %   output      : Structure from run_full_analysis containing:
     %                   .params_estimated : Estimated parameters
-    %                   .se              : Standard errors
-    %                   .loglik          : Log-likelihood
-    %                   .comparison      : (Optional) LR test results
+    %                   .se               : Standard errors
+    %                   .loglik           : Log-likelihood
+    %                   .comparison       : (Optional) LR test results
     %
     %   options    : (Optional) Structure with fields:
-    %                   .save_to_file  : Filename to save results (e.g., 'results.txt')
-    %                                    If empty, no file saved. Default: ''
+    %                   .save_to_file  : Filename to save results (ex: 'results.txt')
+    %                                    (If empty, no file saved. Default: '')
     %                   .k             : Number of AR lags (for parameter naming)
-    %                                    Default: auto-detect from params length
+    %                                    (Default: auto-detect from params length)
     %                   .model_name    : Name to display in header
-    %                                    Default: 'REGIME SWITCHING MODEL'
+    %                                    (Default: 'REGIME SWITCHING MODEL')
     %                   .display       : Display in console (true/false)
-    %                                    Default: true
+    %                                    (Default: true)
     %                   .precision     : Number of decimals for estimates
-    %                                    Default: 4
+    %                                    (Default: 4)
     %
-    % OUTPUTS:
+    % OUTPUTS :
     %   tables     :    Structure containing:
     %                       .endogenous  : Table for endogenous model
     %                       .exogenous   : Table for exogenous model (if available)
@@ -58,8 +58,10 @@ function [tables] = display_estimation_results(output, options)
     t_stats = est ./ se;
     
     %% Generate parameter names dynamically
+    % i.e. if mean model, [mu_low, mu_high, sigma,...]
+    % but if vol model, [mu, sigma_low, sigma_high,...]
     if strcmpi(options.model_type, 'volatility')
-        % === VOLATILITY MODEL ===
+        % VOLATILITY MODEL 
         % Order: [Mu, Sigma_L, Sigma_H, Alpha, Tau, Rho]
         param_names = { ...
             'Mu (Constant)', ...
@@ -70,7 +72,7 @@ function [tables] = display_estimation_results(output, options)
             'Rho (Endogeneity)'
         };
     else
-        % === MEAN MODEL (GDP) ===
+        % MEAN MODEL 
         % Order: [Mu_L, Mu_H, Sigma, Alpha, Tau, Rho]
         param_names = { ...
             'Mu (Recession)', ...
@@ -265,7 +267,7 @@ function [tables] = display_estimation_results(output, options)
     end
     
     function tbl = create_matlab_table(est, se, t_stats, param_names)
-        % Create MATLAB table object for easy export
+        % Create table object for easy export
         
         n = length(est);
         
@@ -283,4 +285,5 @@ function [tables] = display_estimation_results(output, options)
         
         % Create table
         tbl = table(Parameter, Estimate, StdErr, tStat, Significance);
+
     end
