@@ -9,6 +9,7 @@ function visualize_monte_carlo_check(Results, model_type, sim_idx, save_path)
 %   sim_idx    : Index of the simulation iteration to plot (Default: 1)
 %   save_path  : (Optional) Filename or path to save the image (e.g. 'Plot.png')
 %                If set to true (boolean), saves with a default name.
+%% ====================================================================
 
     %% 1. Argument Handling
     if nargin < 2 || isempty(model_type), model_type = 'Mean'; end
@@ -80,4 +81,5 @@ function visualize_monte_carlo_check(Results, model_type, sim_idx, save_path)
             end
         end
     end
+
 end
