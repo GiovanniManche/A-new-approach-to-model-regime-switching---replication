@@ -1,10 +1,10 @@
 function configs = generate_configs(k)
 %% FUNCTION DESCRIPTION
-% Generate all binary configurations for k+1 states
-% Inputs:
-%   k : AR order (number of lags)
+% Generate all binary configurations for k+1 time
+% INPUT :
+%   k       : AR order (number of lags)
 %
-% Outputs:
+% OUTPUT :
 %   configs : Matrix of size (2^(k+1) x k+1)
 %             Each row is a binary configuration [s_t, s_{t-1}, ..., s_{t-k}]
 %% ========================================================================
@@ -18,4 +18,5 @@ function configs = generate_configs(k)
         str = dec2bin(i, num_states);
         configs(i+1, :) = str - '0';
     end
+
 end
