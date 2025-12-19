@@ -1,20 +1,21 @@
 function [pwcond] = transition_density_latent(w, uprec, sprec, tau, alpha, rho, t)
     %% FUNCTION DESCRIPTION
     % Function to compute the transition density of the latent process
-    % CORRECTED VERSION - Fixed bugs from original
+    % It implements the corollary 3.3. of CCP 2017.
     % 
-    % Inputs :
-    % - w: current value for the latent variable
-    % - uprec: precedent value for the residual of endogenous process
-    % - sprec: precedent state (1 for high state, 0 for low state)
-    % - tau: threshold
-    % - alpha: autoregressive coefficient for the latent process
-    % - rho: correlation coefficient
-    % - t: time
+    % INPUTS :
+    %    w        : current value for the latent variable
+    %    uprec    : precedent value for the residual of endogenous process
+    %    sprec    : precedent state (1 for high state, 0 for low state)
+    %    tau: threshold
+    %    alpha    : autoregressive coefficient for the latent process
+    %    rho      : correlation coefficient
+    %    t        : time
     %
-    % Output: p(wt|s_{t-1}, F_{t-1})
+    % OUTPUT : 
+    %    pwcond   : p(wt|s_{t-1}, F_{t-1})
     %
-    % Based on Corollary 3.3 from Chang, Choi & Park (2017)
+    % 
     %% =======================================================================
     %% First case: |alpha| < 1 and |rho| < 1
     if abs(alpha) < 1 && abs(rho) < 1
@@ -128,4 +129,5 @@ function [pwcond] = transition_density_latent(w, uprec, sprec, tau, alpha, rho, 
         error('transition_density_latent: Invalid parameter combination: alpha=%.4f, rho=%.4f', alpha, rho);
     end
     
+
     end
