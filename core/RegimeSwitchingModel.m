@@ -16,7 +16,7 @@ classdef RegimeSwitchingModel
             % Function that checks if parameters are valid, and assign them
             % as attributes.
             %% ============================================================
-            % Validation of parameters: alpha in ]-1,1], rho in [-1,1]
+            % Validation of parameters: alpha in ]-1,1], rho in ]-1,1[
             if alpha <= -1 || alpha > 1
                 if alpha ~= 1, warning('Alpha is outside (-1, 1].'); end
             end
@@ -132,4 +132,5 @@ classdef RegimeSwitchingModel
             if omega < 0, omega = 0; elseif omega > 1, omega = 1; end
         end
     end
+
 end
