@@ -3,6 +3,7 @@ function params = vector_to_params(theta_vec, k, model_type)
 % VECTOR_TO_PARAMS  Converts optimization vector to structure of parameters
 % Refer to crate_params.m for more details
 % Matches the ordering used in optimize_model.m
+%% ====================================================================
 
     if nargin < 3, model_type = 'mean'; end
     
@@ -55,4 +56,5 @@ function params = vector_to_params(theta_vec, k, model_type)
         params.mu_low = mu_out(1); params.mu_high = mu_out(2);
         params.sigma_low = sigma_out; params.sigma_high = sigma_out;
     end
+
 end
