@@ -2,19 +2,19 @@ function params = create_params(alpha, tau, rho, mu, sigma, gamma)
 %% FUNCTION DESCRIPTION
 % Build a parameter structure for an r-regime AR(k) model.
 %
-% Inputs:
-%   - alpha : AR coefficient of the latent factor (|alpha| <= 1)
-%   - tau   : threshold on the latent factor
-%   - rho   : correlation between u_t and v_{t+1} (endogeneity), in [-1,1]
-%   - mu    : (r x 1) vector of regime means   [mu(1), ..., mu(r)]'
-%   - gamma : scalar or (k x 1) vector of AR coefficients for y_t
-%   - sigma : (r x 1) vector of regime volatilities (sigma > 0)
-%   - k     : AR order on y_t (integer >= 0)
+% INPUTS :
+%    alpha : AR coefficient of the latent factor (|alpha| <= 1)
+%    tau   : threshold on the latent factor
+%    rho   : correlation between u_t and v_{t+1} (endogeneity), in [-1,1]
+%    mu    : (r x 1) vector of regime means   [mu(1), ..., mu(r)]'
+%    gamma : scalar or (k x 1) vector of AR coefficients for y_t
+%    sigma : (r x 1) vector of regime volatilities (sigma > 0)
+%    k     : AR order on y_t 
 %
-% Output:
-%   - params: structure with fields:
-%       alpha, tau, rho, mu (r x 1), sigma (r x 1), gamma(k x 1),
-%       k (AR order), r (number of regimes)
+% OUTPUT :
+%     params: structure with fields:
+%               alpha, tau, rho, mu (r x 1), sigma (r x 1), gamma(k x 1),
+%               k (AR order), r (number of regimes)
 %% ========================================================================
 
     %% Basic structure 
@@ -28,7 +28,8 @@ function params = create_params(alpha, tau, rho, mu, sigma, gamma)
     params.gamma = gamma(:);
     params.k     = length(params.gamma);
     
-    % Determine 'r' based on the max dimension of mu or sigma
+    % Determine the number of regimes r based on the max dimension of mu or sigma
+    % (for potential extension)
     params.r = max(length(params.mu), length(params.sigma));
 
     %% Convenience fields for Simulation
@@ -52,4 +53,5 @@ function params = create_params(alpha, tau, rho, mu, sigma, gamma)
     if abs(params.alpha) > 1, error('alpha must be in [-1,1]'); end
     if abs(params.rho) > 1,  error('rho must be in (-1,1)'); end
     if any(params.sigma <= 0), error('sigma must be > 0'); end
+
 end
