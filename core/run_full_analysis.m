@@ -6,15 +6,15 @@ function [out] = run_full_analysis(y, k, model_type, compare_exog, do_plot, vara
     % optimize_model.m for more details.
     %
     % INPUTS:
-    %   y               : (T x 1) time series
-    %   k               : order of the AR on the time series (0 if volatility model)
-    %   model_type      : either 'mean' or 'volatility' (please be sure of
-    %   matching the case)
-    %   compare_exog    : boolean, if true exogenous filter is executed and
+    %    y               : (T x 1) time series
+    %    k               : order of the AR on the time series (0 if volatility model)
+    %    model_type      : either 'mean' or 'volatility' (please be sure of
+    %    matching the case)
+    %    compare_exog    : boolean, if true exogenous filter is executed and
     %                     likelihood ratio test is done.
-    %   do_plot         : boolean, if true charts containing observed data, filtered
+    %    do_plot         : boolean, if true charts containing observed data, filtered
     %                     probabilities, latent factor are given
-    %   varagin         : (Optional)
+    %    varagin         : (Optional)
     %                        'dates'        : Vector of dates (datetime or numeric)
     %                                 If not provided, uses indices 1:T
     %                        'save_figs'    : Save figures to disk 
@@ -27,17 +27,17 @@ function [out] = run_full_analysis(y, k, model_type, compare_exog, do_plot, vara
     %                                         (default: {'png', 'fig'})
     %
     % OUTPUT:
-    %   out: structure containing useful elements for analysis / plotting:
-    %       y                   : time series
-    %       dates               : dates associated with the time series
-    %       params_estimated    : values of endogenous model's parameters
-    %       loglik              : log-likelihood associated to the endogenous model
-    %       se                  : standard errors of coefficients
-    %       filtered_probs      : filtered probabilities of being in the low
-    %                             regime
-    %       p00                 : time-varying probabilities of staying in the low regime
-    %       p11                 : time-varying probabilities of staying in the high regime
-    %       latent_w            : infered latent factor
+    %    out           : structure containing useful elements for analysis / plotting:
+    %                  y                   : time series
+    %                  dates               : dates associated with the time series
+    %                  params_estimated    : values of endogenous model's parameters
+    %                  loglik              : log-likelihood associated to the endogenous model
+    %                  se                  : standard errors of coefficients
+    %                  filtered_probs      : filtered probabilities of being in the low
+    %                                        regime
+    %                  p00                 : time-varying probabilities of staying in the low regime
+    %                  p11                 : time-varying probabilities of staying in the high regime
+    %                  latent_w            : infered latent factor
     %% ====================================================================
 
     %% 1. Parse optional inputs
@@ -60,7 +60,7 @@ function [out] = run_full_analysis(y, k, model_type, compare_exog, do_plot, vara
         fig_format = {fig_format};
     end
     
-    % Create dates vector if not provided
+    % We create dates vector if not provided
     T = length(y);
     if isempty(dates)
         dates = 1:T;
@@ -72,6 +72,7 @@ function [out] = run_full_analysis(y, k, model_type, compare_exog, do_plot, vara
         end
     end
 
+    % Log for user
     fprintf('\n========================================\n');
     fprintf('STARTING ANALYSIS: %s Model (k=%d)\n', upper(model_type), k);
     fprintf('========================================\n');
@@ -84,7 +85,7 @@ function [out] = run_full_analysis(y, k, model_type, compare_exog, do_plot, vara
     best_model = res_endo;
     is_endogenous = true;
 
-    %% 2. Test against Exogenous (if compare_exog is TRUE)
+    %% 2. Test against exogenous if asked
     if compare_exog
         % Log for user
         fprintf('2. Estimating Exogenous Model (Rho = 0)...\n');
@@ -101,7 +102,7 @@ function [out] = run_full_analysis(y, k, model_type, compare_exog, do_plot, vara
         fprintf('H0: rho = 0');
         if pval > 0.10
             fprintf('RESULT: Exogenous model is sufficient (Rho not significant).\n');
-            fprintf('NOTE: Keeping Endogenous model to analyze time-varying probabilities.\n');
+            fprintf('We keep the endogenous model to analyze time-varying probabilities.\n');
         else
             fprintf('RESULT: Endogenous model is better (Rho is significant).\n');
         end
@@ -309,4 +310,5 @@ function save_figures(figs, fig_path, fig_name, fig_formats)
     end
     
     fprintf('Figure export complete.\n\n');
+
 end
