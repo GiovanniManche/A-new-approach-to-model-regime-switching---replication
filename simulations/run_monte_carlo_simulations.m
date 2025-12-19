@@ -13,6 +13,7 @@ function Results = run_monte_carlo_simulations(n_obs, n_simul, rho_values,...
     %
     % OUTPUT:
     %   Results         : Struct containing simulated data (Vol and Mean)
+    %% ====================================================================
 
     %% 1. Handle Optional Inputs 
     if nargin < 5 || isempty(base_vol_params)
@@ -87,4 +88,5 @@ function Results = run_monte_carlo_simulations(n_obs, n_simul, rho_values,...
     end
     
     fprintf('Monte Carlo simulations complete!\n');
+
 end
