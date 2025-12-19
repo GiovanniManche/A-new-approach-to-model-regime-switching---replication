@@ -1,14 +1,14 @@
 function [results] = optimize_model(y, k, model_type, options)
     %% FUNCTION DESCRIPTION
     % Estimates Regime Switching (Mean OR Volatility)
-    %   INPUTS:
-    %     y          : Time series (T x 1)
-    %     k          : AR order of the model (not the latent factor)
-    %     model_type : 'mean' (2 mu, 1 sigma) OR 'volatility' (1 mu, 2 sigma)
-    %     options    : struct with .fix_rho (optional)
+    % INPUTS:
+    %    y          : Time series (T x 1)
+    %    k          : AR order of the model (not the latent factor)
+    %    model_type : 'mean' (2 mu, 1 sigma) OR 'volatility' (1 mu, 2 sigma)
+    %    options    : struct with .fix_rho (optional)
     %
-    %   OUTPUT:
-    %     results    : structure of parameters, with their optimised values
+    % OUTPUT:
+    %    results    : structure of parameters, with their optimised values
     %% ====================================================================
     %% 1. Initialisation
     if nargin < 4, options = struct(); end
@@ -42,10 +42,10 @@ function [results] = optimize_model(y, k, model_type, options)
     end
 
     %% 2. Construct parameters and constraints 
-    % Common Indices for Tail: Alpha=4, Tau=5, Rho = 6, Gamma = 7
+    % Common Indices for parameters other than mu/sigma: Alpha=4, Tau=5, Rho = 6, Gamma = 7
     
     if is_volatility
-        % === VOLATILITY MODEL ===
+        % VOLATILITY MODEL 
         % Structure: [mu, sigma_low, sigma_high, alpha, tau, rho, gamma...]
         % Constraint: 1 mu, 2 sigmas. We force sigma_low < sigma_high.
         
@@ -68,7 +68,7 @@ function [results] = optimize_model(y, k, model_type, options)
         b = -1e-4;
 
     else
-        % === MEAN MODEL ===
+        % MEAN MODEL 
         % Structure: [mu_low, mu_high, sigma, alpha, tau, rho, gamma...]
         % Constraint: 2 mus, 1 sigma. We force mu_low < mu_high.
         
@@ -140,8 +140,9 @@ function [results] = optimize_model(y, k, model_type, options)
         fprintf('Optimization Finished. Exit Flag: %d\n', exitflag);
 
     catch ME
-        fprintf('\nCRITICAL ERROR in optimization: %s\n', ME.message);
+        fprintf('\n CAUTION: critical error in optimization: %s\n', ME.message);
         results.params = []; results.loglik = -Inf;
         rethrow(ME);
     end
+
 end
